@@ -4,6 +4,12 @@ const cors = require('cors');
 const path = require('path');
 const { initDb } = require('./database');
 
+// ── Ensure JWT_SECRET is always set ──────────────────────────────────────────
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'ttm_fallback_secret_change_in_production_!@#2024';
+  console.warn('⚠️  JWT_SECRET not set in environment — using fallback. Set it in Railway Variables!');
+}
+
 const app = express();
 
 app.use(cors());
