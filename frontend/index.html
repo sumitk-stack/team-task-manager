@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Task Manager – Login</title>
+  <meta name="description" content="Sign in to Team Task Manager – collaborate on projects and track tasks with your team." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <div class="auth-page">
+    <div class="auth-card glass fade-up">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">🚀</div>
+        <div class="auth-logo-title">TeamTasker</div>
+        <div class="auth-logo-sub">Collaborate. Organize. Deliver.</div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form" id="form-login" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email Address</label>
+          <input class="form-input" id="login-email" type="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary" type="submit" id="btn-login" style="width:100%;justify-content:center;padding:13px;">
+          Sign In
+        </button>
+        <div class="auth-divider">Don't have an account? <a href="#" onclick="switchTab('signup')" style="color:var(--accent);text-decoration:none;font-weight:600;">Sign Up</a></div>
+      </form>
+
+      <!-- Signup Form -->
+      <form class="auth-form" id="form-signup" style="display:none;" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label class="form-label" for="signup-name">Full Name</label>
+          <input class="form-input" id="signup-name" type="text" placeholder="Jane Doe" required autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signup-email">Email Address</label>
+          <input class="form-input" id="signup-email" type="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="signup-password">Password <span style="color:var(--text-muted);font-weight:400">(min. 6 chars)</span></label>
+          <input class="form-input" id="signup-password" type="password" placeholder="••••••••" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary" type="submit" id="btn-signup" style="width:100%;justify-content:center;padding:13px;">
+          Create Account
+        </button>
+        <div class="auth-divider">Already have an account? <a href="#" onclick="switchTab('login')" style="color:var(--accent);text-decoration:none;font-weight:600;">Sign In</a></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (getToken()) window.location.href = '/dashboard.html';
+
+    function switchTab(tab) {
+      document.getElementById('form-login').style.display  = tab === 'login'  ? 'flex' : 'none';
+      document.getElementById('form-signup').style.display = tab === 'signup' ? 'flex' : 'none';
+      document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in…';
+      try {
+        const { token, user } = await Auth.login(
+          document.getElementById('login-email').value,
+          document.getElementById('login-password').value
+        );
+        setToken(token); setUser(user);
+        toast('Welcome back, ' + user.name + '!', 'success');
+        setTimeout(() => window.location.href = '/dashboard.html', 600);
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In';
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-signup');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating account…';
+      try {
+        const { token, user } = await Auth.signup(
+          document.getElementById('signup-name').value,
+          document.getElementById('signup-email').value,
+          document.getElementById('signup-password').value
+        );
+        setToken(token); setUser(user);
+        toast('Account created! Welcome, ' + user.name + '!', 'success');
+        setTimeout(() => window.location.href = '/dashboard.html', 600);
+      } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Create Account';
+      }
+    }
+  </script>
+</body>
+</html>

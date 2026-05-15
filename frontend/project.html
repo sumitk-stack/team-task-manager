@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project – TeamTasker</title>
+  <meta name="description" content="Kanban board and task management for your project." />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="nav-brand" href="/dashboard.html">
+      <span class="icon">🚀</span> TeamTasker
+    </a>
+    <div class="nav-right">
+      <a class="btn btn-ghost btn-sm" href="/dashboard.html">← Dashboard</a>
+      <div class="nav-user">
+        <div class="avatar" id="nav-avatar">?</div>
+        <span id="nav-username"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="container">
+      <div class="page-header fade-up">
+        <div>
+          <h1 class="page-title" id="proj-title"><span class="spinner"></span></h1>
+          <p id="proj-desc-text" style="margin-top:4px;"></p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="proj-actions">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <div class="project-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar fade-up">
+          <div class="sidebar-section">
+            <div class="sidebar-title">👥 Members</div>
+            <div id="members-list" class="member-list">
+              <div class="spinner"></div>
+            </div>
+            <div id="add-member-section" style="display:none;margin-top:12px;">
+              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="openModal('modal-add-member')">
+                ＋ Add Member
+              </button>
+            </div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-title">📊 Progress</div>
+            <div id="progress-bars" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+        </aside>
+
+        <!-- Kanban Board -->
+        <main>
+          <div class="kanban-board" id="kanban-board">
+            <!-- Todo Column -->
+            <div class="kanban-col" id="col-todo" data-status="todo">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title">
+                  <span class="col-dot col-dot-todo"></span> To Do
+                </div>
+                <span class="col-count" id="count-todo">0</span>
+              </div>
+              <div class="kanban-tasks drop-zone" id="tasks-todo" data-status="todo"
+                ondragover="onDragOver(event)" ondrop="onDrop(event,'todo')" ondragleave="onDragLeave(event)">
+              </div>
+            </div>
+            <!-- In Progress -->
+            <div class="kanban-col" id="col-in_progress" data-status="in_progress">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title">
+                  <span class="col-dot col-dot-progress"></span> In Progress
+                </div>
+                <span class="col-count" id="count-in_progress">0</span>
+              </div>
+              <div class="kanban-tasks drop-zone" id="tasks-in_progress" data-status="in_progress"
+                ondragover="onDragOver(event)" ondrop="onDrop(event,'in_progress')" ondragleave="onDragLeave(event)">
+              </div>
+            </div>
+            <!-- Done -->
+            <div class="kanban-col" id="col-done" data-status="done">
+              <div class="kanban-col-header">
+                <div class="kanban-col-title">
+                  <span class="col-dot col-dot-done"></span> Done
+                </div>
+                <span class="col-count" id="count-done">0</span>
+              </div>
+              <div class="kanban-tasks drop-zone" id="tasks-done" data-status="done"
+                ondragover="onDragOver(event)" ondrop="onDrop(event,'done')" ondragleave="onDragLeave(event)">
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div class="modal-overlay hidden" id="modal-add-task">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">＋ New Task</span>
+        <button class="modal-close" onclick="closeModal('modal-add-task')">✕</button>
+      </div>
+      <form class="modal-body" id="form-add-task" onsubmit="handleCreateTask(event)">
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input class="form-input" id="task-title" type="text" placeholder="Task title…" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="task-desc" placeholder="Optional details…"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-select" id="task-priority">
+              <option value="low">↓ Low</option>
+              <option value="medium" selected>→ Medium</option>
+              <option value="high">↑ High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input class="form-input" id="task-due" type="date" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign To</label>
+          <select class="form-select" id="task-assignee">
+            <option value="">— Unassigned —</option>
+          </select>
+        </div>
+        <div class="modal-footer" style="margin-top:0;">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-add-task')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-add-task">Add Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Task Modal -->
+  <div class="modal-overlay hidden" id="modal-edit-task">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">✏️ Edit Task</span>
+        <button class="modal-close" onclick="closeModal('modal-edit-task')">✕</button>
+      </div>
+      <form class="modal-body" id="form-edit-task" onsubmit="handleUpdateTask(event)">
+        <input type="hidden" id="edit-task-id" />
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input class="form-input" id="edit-task-title" type="text" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="edit-task-desc"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-select" id="edit-task-priority">
+              <option value="low">↓ Low</option>
+              <option value="medium">→ Medium</option>
+              <option value="high">↑ High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="edit-task-status">
+              <option value="todo">📋 To Do</option>
+              <option value="in_progress">⚡ In Progress</option>
+              <option value="done">✅ Done</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input class="form-input" id="edit-task-due" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Assign To</label>
+            <select class="form-select" id="edit-task-assignee">
+              <option value="">— Unassigned —</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="margin-top:0;">
+          <button type="button" class="btn btn-danger btn-sm" id="btn-delete-task" onclick="handleDeleteTask()">🗑 Delete</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-edit-task')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-update-task">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Project Modal -->
+  <div class="modal-overlay hidden" id="modal-edit-project">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">✏️ Edit Project</span>
+        <button class="modal-close" onclick="closeModal('modal-edit-project')">✕</button>
+      </div>
+      <form class="modal-body" id="form-edit-project" onsubmit="handleUpdateProject(event)">
+        <div class="form-group">
+          <label class="form-label">Project Name *</label>
+          <input class="form-input" id="edit-proj-name" type="text" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="edit-proj-desc"></textarea>
+        </div>
+        <div class="modal-footer" style="margin-top:0;">
+          <button type="button" class="btn btn-danger btn-sm" onclick="handleDeleteProject()">🗑 Delete Project</button>
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-edit-project')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-update-proj">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div class="modal-overlay hidden" id="modal-add-member">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">👥 Add Member</span>
+        <button class="modal-close" onclick="closeModal('modal-add-member')">✕</button>
+      </div>
+      <form class="modal-body" id="form-add-member" onsubmit="handleAddMember(event)">
+        <div class="form-group">
+          <label class="form-label">Member Email</label>
+          <input class="form-input" id="member-email" type="email" placeholder="colleague@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-select" id="member-role">
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="modal-footer" style="margin-top:0;">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-add-member')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-add-member">Add Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+
+    const urlParams  = new URLSearchParams(window.location.search);
+    const PROJECT_ID = urlParams.get('id');
+    if (!PROJECT_ID) window.location.href = '/dashboard.html';
+
+    const user = getUser();
+    if (user) {
+      document.getElementById('nav-avatar').textContent = avatarInitials(user.name);
+      document.getElementById('nav-username').textContent = user.name;
+    }
+
+    let myRole   = 'member';
+    let allTasks = [];
+    let members  = [];
+    let dragId   = null;
+
+    // ── Load Project ──────────────────────────────────────────────────────────
+    async function loadProject() {
+      try {
+        const { project, members: m, my_role } = await Projects.get(PROJECT_ID);
+        myRole   = my_role;
+        members  = m;
+
+        document.getElementById('proj-title').textContent      = '📁 ' + project.name;
+        document.getElementById('proj-desc-text').textContent  = project.description || '';
+        document.title = project.name + ' – TeamTasker';
+
+        // Actions
+        const actEl = document.getElementById('proj-actions');
+        let html = `<button class="btn btn-primary" onclick="openAddTask()">＋ Add Task</button>`;
+        if (myRole === 'admin') {
+          html += `<button class="btn btn-ghost" onclick="openEditProject('${project.name}','${project.description}')">✏️ Edit</button>`;
+        }
+        actEl.innerHTML = html;
+
+        // Members sidebar
+        renderMembers(m, my_role);
+      } catch (err) {
+        toast('Failed to load project: ' + err.message, 'error');
+      }
+    }
+
+    function renderMembers(m, role) {
+      const el = document.getElementById('members-list');
+      el.innerHTML = m.map(mem => `
+        <div class="member-item">
+          <div class="member-info">
+            <div class="avatar" style="width:30px;height:30px;font-size:0.7rem;">${avatarInitials(mem.name)}</div>
+            <div>
+              <div class="member-name">${mem.name}</div>
+              <div class="member-email">${mem.email}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="badge badge-${mem.role}">${mem.role}</span>
+            ${role === 'admin' && String(mem.id) !== String(user?.id) ? `<button class="btn btn-icon btn-danger" title="Remove" onclick="handleRemoveMember(${mem.id},'${mem.name}')">✕</button>` : ''}
+          </div>
+        </div>`).join('');
+      if (role === 'admin') {
+        document.getElementById('add-member-section').style.display = 'block';
+      }
+    }
+
+    // ── Load Tasks ────────────────────────────────────────────────────────────
+    async function loadTasks() {
+      try {
+        const { tasks } = await Tasks.list(PROJECT_ID);
+        allTasks = tasks;
+        renderBoard(tasks);
+      } catch (err) {
+        toast('Failed to load tasks: ' + err.message, 'error');
+      }
+    }
+
+    function renderBoard(tasks) {
+      const cols  = { todo: [], in_progress: [], done: [] };
+      tasks.forEach(t => { if (cols[t.status]) cols[t.status].push(t); });
+
+      ['todo', 'in_progress', 'done'].forEach(status => {
+        const el = document.getElementById('tasks-' + status);
+        const ct = document.getElementById('count-' + status);
+        ct.textContent = cols[status].length;
+        if (!cols[status].length) {
+          el.innerHTML = `<div class="empty-state" style="padding:30px 10px;">
+            <div class="empty-icon" style="font-size:2rem;">📭</div>
+            <div class="empty-title" style="font-size:0.85rem;">Drop tasks here</div>
+          </div>`;
+          return;
+        }
+        el.innerHTML = cols[status].map(t => taskCardHTML(t)).join('');
+        // Attach drag events
+        el.querySelectorAll('.task-card').forEach(card => attachDrag(card));
+      });
+
+      // Progress bars
+      const total = tasks.length;
+      const done  = cols.done.length;
+      const pct   = total ? Math.round((done / total) * 100) : 0;
+      document.getElementById('progress-bars').innerHTML = `
+        <div style="font-size:0.82rem;color:var(--text-secondary);display:flex;justify-content:space-between;">
+          <span>Overall</span><span>${pct}%</span>
+        </div>
+        <div style="background:var(--bg-secondary);border-radius:6px;height:8px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--success));transition:width 1s;border-radius:6px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px;">
+          <div style="text-align:center;font-size:0.78rem;">
+            <div style="color:var(--status-todo);font-weight:700;">${cols.todo.length}</div>
+            <div style="color:var(--text-muted);">To Do</div>
+          </div>
+          <div style="text-align:center;font-size:0.78rem;">
+            <div style="color:var(--status-progress);font-weight:700;">${cols.in_progress.length}</div>
+            <div style="color:var(--text-muted);">In Progress</div>
+          </div>
+          <div style="text-align:center;font-size:0.78rem;">
+            <div style="color:var(--status-done);font-weight:700;">${cols.done.length}</div>
+            <div style="color:var(--text-muted);">Done</div>
+          </div>
+        </div>`;
+    }
+
+    function taskCardHTML(t) {
+      const overdue = isOverdue(t.due_date, t.status);
+      const isAdmin = myRole === 'admin';
+      return `
+        <div class="task-card" draggable="true" id="task-${t.id}" data-id="${t.id}" data-status="${t.status}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div class="task-card-title">${t.title}</div>
+            <div class="task-card-actions">
+              ${isAdmin ? `<button class="btn btn-icon btn-ghost" style="font-size:0.8rem;padding:4px 6px;" onclick="openEditTask(${t.id})" title="Edit">✏️</button>` : ''}
+            </div>
+          </div>
+          ${t.description ? `<div class="task-card-desc">${t.description}</div>` : ''}
+          <div class="task-card-meta">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              ${priorityBadge(t.priority)}
+              ${t.assigned_name ? `<div class="task-card-assignee"><div class="avatar" style="width:20px;height:20px;font-size:0.6rem;">${avatarInitials(t.assigned_name)}</div>${t.assigned_name}</div>` : ''}
+            </div>
+            ${t.due_date ? `<div class="task-card-due ${overdue ? 'overdue' : ''}">📅 ${formatDate(t.due_date)}${overdue ? ' ⚠️' : ''}</div>` : ''}
+          </div>
+        </div>`;
+    }
+
+    // ── Drag & Drop ───────────────────────────────────────────────────────────
+    function attachDrag(card) {
+      card.addEventListener('dragstart', e => {
+        dragId = card.dataset.id;
+        setTimeout(() => card.classList.add('dragging'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-active'));
+      });
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-active');
+    }
+    function onDragLeave(e) { e.currentTarget.classList.remove('drag-active'); }
+    async function onDrop(e, newStatus) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-active');
+      if (!dragId) return;
+      const task = allTasks.find(t => String(t.id) === String(dragId));
+      if (!task || task.status === newStatus) return;
+
+      const isAdmin    = myRole === 'admin';
+      const isAssignee = String(task.assigned_to) === String(user?.id);
+      if (!isAdmin && !isAssignee) { toast('You can only move tasks assigned to you', 'error'); return; }
+
+      try {
+        const payload = isAdmin
+          ? { title: task.title, description: task.description, due_date: task.due_date, priority: task.priority, status: newStatus, assigned_to: task.assigned_to }
+          : { status: newStatus };
+        await Tasks.update(dragId, payload);
+        task.status = newStatus;
+        renderBoard(allTasks);
+        toast('Task moved!', 'success');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+      dragId = null;
+    }
+
+    // ── Add Task ──────────────────────────────────────────────────────────────
+    function openAddTask() {
+      if (myRole !== 'admin') { toast('Only admins can create tasks', 'error'); return; }
+      const sel = document.getElementById('task-assignee');
+      sel.innerHTML = '<option value="">— Unassigned —</option>' +
+        members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      document.getElementById('form-add-task').reset();
+      openModal('modal-add-task');
+    }
+
+    async function handleCreateTask(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-add-task');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      try {
+        await Tasks.create(PROJECT_ID, {
+          title:       document.getElementById('task-title').value,
+          description: document.getElementById('task-desc').value,
+          priority:    document.getElementById('task-priority').value,
+          due_date:    document.getElementById('task-due').value || null,
+          assigned_to: document.getElementById('task-assignee').value || null,
+        });
+        closeModal('modal-add-task');
+        toast('Task created!', 'success');
+        await loadTasks();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = 'Add Task';
+      }
+    }
+
+    // ── Edit Task ─────────────────────────────────────────────────────────────
+    function openEditTask(taskId) {
+      const t = allTasks.find(x => x.id === taskId);
+      if (!t) return;
+      document.getElementById('edit-task-id').value       = t.id;
+      document.getElementById('edit-task-title').value    = t.title;
+      document.getElementById('edit-task-desc').value     = t.description || '';
+      document.getElementById('edit-task-priority').value = t.priority;
+      document.getElementById('edit-task-status').value   = t.status;
+      document.getElementById('edit-task-due').value      = t.due_date ? t.due_date.split('T')[0] : '';
+
+      const sel = document.getElementById('edit-task-assignee');
+      sel.innerHTML = '<option value="">— Unassigned —</option>' +
+        members.map(m => `<option value="${m.id}" ${String(m.id) === String(t.assigned_to) ? 'selected' : ''}>${m.name}</option>`).join('');
+
+      document.getElementById('btn-delete-task').style.display = myRole === 'admin' ? 'inline-flex' : 'none';
+      openModal('modal-edit-task');
+    }
+
+    async function handleUpdateTask(e) {
+      e.preventDefault();
+      const id  = document.getElementById('edit-task-id').value;
+      const btn = document.getElementById('btn-update-task');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      try {
+        await Tasks.update(id, {
+          title:       document.getElementById('edit-task-title').value,
+          description: document.getElementById('edit-task-desc').value,
+          priority:    document.getElementById('edit-task-priority').value,
+          status:      document.getElementById('edit-task-status').value,
+          due_date:    document.getElementById('edit-task-due').value || null,
+          assigned_to: document.getElementById('edit-task-assignee').value || null,
+        });
+        closeModal('modal-edit-task');
+        toast('Task updated!', 'success');
+        await loadTasks();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = 'Save Changes';
+      }
+    }
+
+    async function handleDeleteTask() {
+      const id = document.getElementById('edit-task-id').value;
+      if (!confirm('Delete this task?')) return;
+      try {
+        await Tasks.delete(id);
+        closeModal('modal-edit-task');
+        toast('Task deleted', 'info');
+        await loadTasks();
+      } catch (err) { toast(err.message, 'error'); }
+    }
+
+    // ── Edit Project ──────────────────────────────────────────────────────────
+    function openEditProject(name, desc) {
+      document.getElementById('edit-proj-name').value = name;
+      document.getElementById('edit-proj-desc').value = desc;
+      openModal('modal-edit-project');
+    }
+
+    async function handleUpdateProject(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-update-proj');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      try {
+        await Projects.update(PROJECT_ID, {
+          name:        document.getElementById('edit-proj-name').value,
+          description: document.getElementById('edit-proj-desc').value,
+        });
+        closeModal('modal-edit-project');
+        toast('Project updated!', 'success');
+        await loadProject();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = 'Save';
+      }
+    }
+
+    async function handleDeleteProject() {
+      if (!confirm('Delete this project and ALL its tasks? This cannot be undone.')) return;
+      try {
+        await Projects.delete(PROJECT_ID);
+        toast('Project deleted', 'info');
+        setTimeout(() => window.location.href = '/dashboard.html', 800);
+      } catch (err) { toast(err.message, 'error'); }
+    }
+
+    // ── Members ───────────────────────────────────────────────────────────────
+    async function handleAddMember(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-add-member');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      try {
+        await Projects.addMember(
+          PROJECT_ID,
+          document.getElementById('member-email').value,
+          document.getElementById('member-role').value
+        );
+        closeModal('modal-add-member');
+        toast('Member added!', 'success');
+        document.getElementById('form-add-member').reset();
+        await loadProject();
+        await loadTasks();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        btn.disabled = false; btn.innerHTML = 'Add Member';
+      }
+    }
+
+    async function handleRemoveMember(userId, name) {
+      if (!confirm(`Remove ${name} from this project?`)) return;
+      try {
+        await Projects.removeMember(PROJECT_ID, userId);
+        toast(`${name} removed`, 'info');
+        await loadProject();
+      } catch (err) { toast(err.message, 'error'); }
+    }
+
+    // ── Close on backdrop ─────────────────────────────────────────────────────
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadProject();
+    loadTasks();
+  </script>
+</body>
+</html>
